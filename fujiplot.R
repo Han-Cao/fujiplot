@@ -13,10 +13,14 @@ CIRCOS_CONF = file.path(script_dir, "config",      "circos.conf")
 CIRCOS_PATH = "circos"
 # CIRCOS_DEBUG_GROUP = "text,textplace"
 CIRCOS_DEBUG_GROUP = "summary"
-OUTPUT_BARPLOT = TRUE
+OUTPUT_BARPLOT = FALSE
 SCATTER_BACKGROUND_COLOR_ALPHA = 0.3
-LARGE_POINT_SIZE = 16
+LARGE_POINT_SIZE = 12
 SMALL_POINT_SIZE = 8
+# highlight genes with associated categories >= N
+N_CATEGORY_HIGHLIGHT = 3
+# exclude gene match this regex
+EXCLUDE_GENE_PATTERN = "(ENST|ENSG)\\d+"
 
 # intermediate files
 COLOR_CONF =              file.path(script_dir, "config",      "color.conf")
@@ -128,10 +132,11 @@ nsnps_per_locus = df %>% group_by(LOCUS_ID) %>% summarize(n = n())
 df = df %>% mutate(CHR = str_c("hs", CHR),
                    nsnps = nsnps_per_locus$n[match(LOCUS_ID, nsnps_per_locus$LOCUS_ID)])
 
-inter_categorical = df %>% group_by(LOCUS_ID) %>% summarize(CHR = most_common(CHR),
+inter_categorical = df %>% filter(!grepl(EXCLUDE_GENE_PATTERN, GENE)) %>%
+                           group_by(LOCUS_ID) %>% summarize(CHR = most_common(CHR),
                                                             BP = most_common(BP),
                                                             n = length(unique(CATEGORY))) %>%
-                                                  filter(n > 1)
+                                                  filter(n >= N_CATEGORY_HIGHLIGHT)
 write.table(inter_categorical[c("CHR", "BP", "BP")], HIGHLIGHT_DATA, sep = "\t", row.names = F, col.names = F, quote = F)
 message(sprintf("* Highlights data (inter-categorical pleiotropic loci): %s", HIGHLIGHT_DATA))
 
